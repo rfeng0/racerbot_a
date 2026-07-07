@@ -11,6 +11,10 @@ FollowTheGapNode::FollowTheGapNode() : Node("follow_the_gap_node")
         std::bind(&FollowTheGapNode::lidar_callback, this, std::placeholders::_1));
 }
 
+void FollowTheGapNode::lidar_callback(const sensor_msgs::msg::LaserScan::ConstSharedPtr scan_msg)
+{
+}
+
 int main(int argc, char **argv)
 {
     rclcpp::init(argc, argv);
