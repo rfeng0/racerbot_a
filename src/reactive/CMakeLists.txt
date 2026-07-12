@@ -10,12 +10,23 @@ find_package(ament_cmake REQUIRED)
 find_package(ackermann_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(rclcpp REQUIRED)
+find_package(nav_msgs REQUIRED)
 
-add_executable(reactive_node src/reactive_node.cpp)
-ament_target_dependencies(reactive_node rclcpp ackermann_msgs sensor_msgs)
+# Add gap finder exectuable
+add_executable(gap_finder_node src/gap_finder_node.cpp)
+ament_target_dependencies(gap_finder_node rclcpp ackermann_msgs sensor_msgs nav_msgs)
+install(TARGETS gap_finder_node DESTINATION lib/${PROJECT_NAME})
 
-install(TARGETS reactive_node
-  DESTINATION lib/${PROJECT_NAME})
+# Add gap follower exectuable
+add_executable(gap_follow_node src/gap_follow_node.cpp)
+ament_target_dependencies(gap_follow_node rclcpp ackermann_msgs sensor_msgs nav_msgs)
+install(TARGETS gap_follow_node DESTINATION lib/${PROJECT_NAME})
+
+# add launch
+install (
+  DIRECTORY launch
+  DESTINATION share/${PROJECT_NAME}
+)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
