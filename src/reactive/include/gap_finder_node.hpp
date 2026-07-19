@@ -4,6 +4,7 @@
 #include "ackermann_msgs/msg/ackermann_drive_stamped.hpp"
 #include <vector>
 #include <cmath>
+#include <algorithm>
 
 class GapFinderNode : public rclcpp::Node
 {
@@ -16,6 +17,7 @@ private:
     double car_width_extended_;
     double disparity_threshold_;
     double fov_half_angle_;
+    double minimum_gap_threshold_;
 
     /// @brief Callback invoked each time the lidar completes a new scan.
     /// @param scan_msg Shared pointer to the incoming LaserScan message.

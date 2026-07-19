@@ -10,12 +10,14 @@ GapFinderNode::GapFinderNode() : Node("gap_finder_node")
     this->declare_parameter("car_width_extended", 0.35);
     this->declare_parameter("disparity_threshold", 2.0);
     this->declare_parameter("fov_half_angle", M_PI/2.0); // 90 degrees
+    this->declare_parameter("minimum_gap_threshold", 1.0);
 
     // Read into member variables
     max_lidar_range_ = this->get_parameter("max_lidar_range").as_double();
     car_width_extended_ = this->get_parameter("car_width_extended").as_double();
     disparity_threshold_ = this->get_parameter("disparity_threshold").as_double();
     fov_half_angle_ = this->get_parameter("fov_half_angle").as_double();
+    minimum_gap_threshold_ = this->get_parameter("minimum_gap_threshold").as_double();
     
     laser_scan_sub_ = this->create_subscription<sensor_msgs::msg::LaserScan>(
         "scan",
@@ -27,7 +29,11 @@ void GapFinderNode::lidar_callback(const sensor_msgs::msg::LaserScan::ConstShare
 {
     auto ranges = preprocess_lidar(scan_msg);
     extend_obstacles(scan_msg, ranges);
-    size_t gap_index = find_furthest_gap(scan_msg, ranges);
+    int gap_index = find_furthest_gap(scan_msg, ranges);
+    if (gap_index != -1) {
+        // TODO: Send information to gap finder
+        return;
+    }
 }
 
 vector<float> GapFinderNode::preprocess_lidar(const sensor_msgs::msg::LaserScan::ConstSharedPtr scan_msg)
@@ -78,8 +84,50 @@ void GapFinderNode::extend_obstacles(const sensor_msgs::msg::LaserScan::ConstSha
 int GapFinderNode::find_furthest_gap(const sensor_msgs::msg::LaserScan::ConstSharedPtr scan_msg,
     vector<float>& ranges)
 {
-    // TODO
-    return 0;
+    int best_index = -1;
+    float furthest_range = 0.0;
+
+    size_t i = 0;
+    while (i < ranges.size())
+    {
+        // Skip points that aren't part of a "free" gap
+        if (ranges[i] <= minimum_gap_threshold_)
+        {
+            ++i;
+            continue;
+        }
+
+        // Found the start of a gap - walk forward to find its end
+        size_t gap_start = i;
+        while (i < ranges.size() && ranges[i] > minimum_gap_threshold_)
+        {
+            ++i;
+        }
+        size_t gap_end = i; // exclusive
+
+        // Check if the gap is wide enough for the car to fit through,
+        // using the closest range within the gap as the worst-case radius
+        float min_range_in_gap = *std::min_element(ranges.begin() + gap_start, ranges.begin() + gap_end);
+        double theta = car_width_extended_ / min_range_in_gap;
+        size_t min_index_width = static_cast<size_t>(theta / scan_msg->angle_increment);
+
+        if ((gap_end - gap_start) < min_index_width)
+        {
+            continue; // gap too narrow for the car, skip it
+        }
+
+        // Gap is valid - find the furthest point within it
+        for (size_t j = gap_start; j < gap_end; ++j)
+        {
+            if (ranges[j] > furthest_range)
+            {
+                furthest_range = ranges[j];
+                best_index = static_cast<int>(j);
+            }
+        }
+    }
+
+    return best_index;
 }
 
 int main(int argc, char **argv)
