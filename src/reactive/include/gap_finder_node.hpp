@@ -2,6 +2,7 @@
 #include "sensor_msgs/msg/laser_scan.hpp"
 #include "nav_msgs/msg/odometry.hpp"
 #include "ackermann_msgs/msg/ackermann_drive_stamped.hpp"
+#include "reactive/msg/gap.hpp"
 #include <vector>
 #include <cmath>
 #include <algorithm>
@@ -13,6 +14,7 @@ public:
 
 private:
     rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr laser_scan_sub_;
+    rclcpp::Publisher<reactive::msg::Gap>::SharedPtr gap_pub_;
     double max_lidar_range_;
     double car_width_extended_;
     double disparity_threshold_;
