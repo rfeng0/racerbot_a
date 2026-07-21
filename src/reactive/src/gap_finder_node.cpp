@@ -23,6 +23,8 @@ GapFinderNode::GapFinderNode() : Node("gap_finder_node")
         "scan",
         10,
         std::bind(&GapFinderNode::lidar_callback, this, std::placeholders::_1));
+
+    gap_pub_ = this->create_publisher<reactive::msg::Gap>("gap", 10);
 }
 
 void GapFinderNode::lidar_callback(const sensor_msgs::msg::LaserScan::ConstSharedPtr scan_msg)
@@ -30,10 +32,25 @@ void GapFinderNode::lidar_callback(const sensor_msgs::msg::LaserScan::ConstShare
     auto ranges = preprocess_lidar(scan_msg);
     extend_obstacles(scan_msg, ranges);
     int gap_index = find_furthest_gap(scan_msg, ranges);
-    if (gap_index != -1) {
-        // TODO: Send information to gap finder
+    
+    if (gap_index == -1) {
+        RCLCPP_WARN(this->get_logger(), "No valid gap found");
         return;
     }
+
+    reactive::msg::Gap gap_msg;
+    gap_msg.angles.reserve(ranges.size());
+    gap_msg.ranges.reserve(ranges.size());
+
+    for (size_t i = 0; i < ranges.size(); ++i) {
+        gap_msg.angles.push_back(scan_msg->angle_min + scan_msg->angle_increment * i);
+        gap_msg.ranges.push_back(ranges[i]);
+    }
+
+    gap_msg.target_angle = scan_msg->angle_min + scan_msg->angle_increment * gap_index;
+    gap_msg.target_range = ranges[gap_index];
+
+    gap_pub_->publish(gap_msg);
 }
 
 vector<float> GapFinderNode::preprocess_lidar(const sensor_msgs::msg::LaserScan::ConstSharedPtr scan_msg)
